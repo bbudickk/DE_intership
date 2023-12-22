@@ -96,33 +96,48 @@ ORDER BY
 -- SEVENTH TASK
 
 SELECT 
-    cat.name AS category, 
-    SUM(f.rental_duration) AS total_rent 
-FROM 
-    customer c
-LEFT JOIN 
-    address a ON a.address_id = c.address_id
-LEFT JOIN 
-    city ci ON ci.city_id = a.city_id
-LEFT JOIN 
-    rental r ON r.customer_id = c.customer_id
-LEFT JOIN 
-    inventory i ON r.inventory_id = i.inventory_id
-LEFT JOIN 
-    film f ON f.film_id = i.film_id
-LEFT JOIN 
-    film_category fc ON f.film_id = fc.film_id
-LEFT JOIN 
-    category cat ON cat.category_id = fc.category_id
+    category,
+    SUM(total_rent) AS sum_total_rent
+FROM (
+    SELECT 
+        city,
+        category,
+        total_rent,
+        ROW_NUMBER() OVER (PARTITION BY city ORDER BY total_rent DESC) AS rent_rank
+    FROM (
+        SELECT 
+            ci.city AS city,
+            cat.name AS category,
+            SUM(f.rental_duration) AS total_rent
+        FROM 
+            customer c
+        LEFT JOIN 
+            address a ON a.address_id = c.address_id
+        LEFT JOIN 
+            city ci ON ci.city_id = a.city_id
+        LEFT JOIN 
+            rental r ON r.customer_id = c.customer_id
+        LEFT JOIN 
+            inventory i ON r.inventory_id = i.inventory_id
+        LEFT JOIN 
+            film f ON f.film_id = i.film_id
+        LEFT JOIN 
+            film_category fc ON f.film_id = fc.film_id
+        LEFT JOIN 
+            category cat ON cat.category_id = fc.category_id
+        WHERE 
+            ci.city LIKE 'a%' OR ci.city LIKE '%-%'
+        GROUP BY 
+            ci.city, cat.name
+    ) AS ci_cat_rent
+) AS subquery
 WHERE 
-    ci.city LIKE 'a%' OR ci.city LIKE '%-%'
+    rent_rank = 1
 GROUP BY 
-    cat.name
+    category
 ORDER BY 
-    total_rent DESC;
-
-
-
+    sum_total_rent DESC
+LIMIT 1;
 
 
 
